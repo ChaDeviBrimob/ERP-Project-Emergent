@@ -1,6 +1,7 @@
 import base64
 import csv
 import io
+import re
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -12,22 +13,50 @@ router = APIRouter(prefix="/api")
 KONDISI = ["PUBLISHED", "SLOW MOVING", "DEAD STOCK", "URGENT"]
 ADJ_TYPES = {"Stok Masuk (+)": "stock_in", "Return Masuk (+)": "return_in",
              "Barang Keluar (-)": "stock_out", "Barang Rusak (-)": "stock_out"}
-EXPORT_COLS = ["sku", "nama", "variant", "kategori", "min_stock", "stok_awal", "stock_in", "return_in",
-               "stock_out", "stok_riil", "status_stok", "hpp", "harga_jual", "kondisi"]
+EXPORT_COLS = [
+    "barcode",
+    "sku",
+    "nama",
+    "variant",
+    "kategori",
+    "action_summary",
+    "supplier_utama",
+    "min_stock",
+    "stok_awal",
+    "stock_in",
+    "return_in",
+    "stock_out",
+    "stok_riil",
+    "status_stok",
+    "hpp",
+    "harga_normal",
+    "harga_jual",
+    "diskon_promo",
+    "kondisi",
+]
 
 
 class ProductIn(BaseModel):
     sku: str
     nama: str
+    barcode: str = ""
     variant: str = ""
     kategori: str = ""
+    action_summary: str = ""
+    catatan_tindakan: str = ""
+    catatan_staff: str = ""
     min_stock: int = 0
     stok_awal: int = 0
     stock_in: int = 0
     return_in: int = 0
     stock_out: int = 0
     hpp: float = 0
+    harga_normal: float = 0
     harga_jual: float = 0
+    diskon_promo: float = 0
+    supplier_utama: str = ""
+    lokasi_supplier: str = ""
+    satuan_barang: str = "pcs"
     kondisi: str = "PUBLISHED"
     barang_susah: bool = False
     image: Optional[str] = None
@@ -55,21 +84,50 @@ def parse_upload(content: bytes, filename: str):
     rows = [r for r in rows if any(r)]
     if not rows:
         return []
-    headers = [h.lower().replace(" ", "_") for h in rows[0]]
-    return [dict(zip(headers, r)) for r in rows[1:]]
+    header_row = 0
+    for index, row in enumerate(rows[:60]):
+        joined = " ".join(normalize_header(cell) for cell in row)
+        has_code = any(key in joined for key in ("barcode", "sku", "kode_barang"))
+        has_name = any(key in joined for key in ("nama", "barang", "products"))
+        if has_code and has_name:
+            header_row = index
+            break
+    headers = unique_headers(rows[header_row])
+    return [dict(zip(headers, row)) for row in rows[header_row + 1:]]
+
+
+def normalize_header(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", value.lower())
+    return normalized.strip("_")
+
+
+def unique_headers(row: list[str]) -> list[str]:
+    result = []
+    counts = {}
+    for index, value in enumerate(row):
+        base = normalize_header(value) or f"kolom_{index + 1}"
+        counts[base] = counts.get(base, 0) + 1
+        result.append(base if counts[base] == 1 else f"{base}_{counts[base]}")
+    return result
 
 
 def to_int(v):
     try:
-        return int(float(str(v).replace(",", "").replace(".", "") or 0)) if str(v).strip() not in ("", "-") else 0
+        raw = re.sub(r"[^0-9-]", "", str(v))
+        return int(raw) if raw not in ("", "-") else 0
     except ValueError:
         return 0
 
 
 def pick(row, *keys):
     for k in keys:
+        value = row.get(k)
+        if value not in (None, ""):
+            return value
+    for k in keys:
         for rk, rv in row.items():
-            if k in rk and rv not in (None, ""):
+            pattern = rf"(?:^|_){re.escape(k)}(?:_|$)"
+            if re.search(pattern, rk) and rv not in (None, ""):
                 return rv
     return ""
 
@@ -78,8 +136,12 @@ def pick(row, *keys):
 async def list_products(q: str = "", status: str = "", kondisi: str = "", _=Depends(get_current_user)):
     flt = {}
     if q:
-        flt["$or"] = [{"sku": {"$regex": q, "$options": "i"}}, {"nama": {"$regex": q, "$options": "i"}},
-                      {"variant": {"$regex": q, "$options": "i"}}]
+        flt["$or"] = [
+            {"sku": {"$regex": q, "$options": "i"}},
+            {"barcode": {"$regex": q, "$options": "i"}},
+            {"nama": {"$regex": q, "$options": "i"}},
+            {"variant": {"$regex": q, "$options": "i"}},
+        ]
     if kondisi:
         flt["kondisi"] = kondisi
     items = [with_calc(p) for p in await db.products.find(flt, NO_ID).sort("sku", 1).to_list(5000)]
@@ -146,17 +208,60 @@ async def import_products(file: UploadFile = File(...), _=Depends(get_current_us
     rows = parse_upload(await file.read(), file.filename)
     created = updated = 0
     for r in rows:
-        sku = pick(r, "sku", "barcode", "kode")
-        nama = pick(r, "nama")
+        barcode = pick(r, "barcode", "kode_barang")
+        sku = pick(r, "sku_product", "sku", "kode_barang", "barcode")
+        nama = pick(r, "nama_barang", "nama_products", "nama")
+        if sku.upper() in {"KODE BARANG", "SKU PRODUCT", "BARCODE"}:
+            continue
         if not sku or not nama:
             continue
-        doc = {"sku": sku, "nama": nama, "variant": pick(r, "variant", "spesifikasi"),
-               "kategori": pick(r, "kategori"), "min_stock": to_int(pick(r, "min")),
-               "stok_awal": to_int(pick(r, "stok_awal", "awal")), "stock_in": to_int(pick(r, "stock_in", "masuk")),
-               "return_in": to_int(pick(r, "return", "retur")),
-               "stock_out": abs(to_int(pick(r, "stock_out", "keluar"))),
-               "hpp": to_int(pick(r, "hpp")), "harga_jual": to_int(pick(r, "harga_jual", "jual")),
-               "kondisi": (pick(r, "kondisi") or "PUBLISHED").upper(), "updated_at": now_iso()}
+        stok_awal = pick(r, "stok_awal", "stock_awal", "awal")
+        stock_in = pick(r, "stock_in", "barang_masuk", "masuk")
+        return_in = pick(r, "return_in", "retur_masuk", "retur")
+        stock_out = pick(r, "stock_out", "stock_keluar", "keluar")
+        real_stock = pick(r, "real_stock_inventory", "actual_inventory", "inventory_stock")
+        if real_stock and not any((stok_awal, stock_in, return_in)):
+            stok_awal = real_stock
+            stock_in = 0
+            return_in = 0
+            stock_out = 0
+        doc = {
+            "sku": sku,
+            "barcode": barcode or sku,
+            "nama": nama,
+            "variant": pick(r, "variant", "spesifikasi", "kapasitas"),
+            "kategori": pick(r, "kategori"),
+            "action_summary": pick(r, "action_summary", "to_do_task", "tindakan"),
+            "catatan_tindakan": pick(r, "keterangan_catatan", "catatan_tindakan"),
+            "catatan_staff": pick(r, "catatan_semua_staff", "catatan_staff"),
+            "min_stock": to_int(pick(r, "minimum_keep_stock", "min_stock", "minimum")),
+            "stok_awal": to_int(stok_awal),
+            "stock_in": to_int(stock_in),
+            "return_in": to_int(return_in),
+            "stock_out": abs(to_int(stock_out)),
+            "hpp": to_int(pick(r, "hpp", "cogs")),
+            "harga_normal": to_int(pick(r, "harga_jual_normal", "harga_sebelum_promo")),
+            "harga_jual": to_int(pick(r, "harga_jual_setelah", "harga_jual", "harga_setelah")),
+            "diskon_promo": to_int(pick(r, "discount_promo", "discount", "disc")),
+            "supplier_utama": pick(
+                r,
+                "nama_supplyer_utama",
+                "nama_supplier_utama",
+                "supplier_utama",
+                "supplyer",
+                "supplier",
+            ),
+            "lokasi_supplier": pick(
+                r,
+                "lokasi_supplyer_utama",
+                "lokasi_suppleyr_utama",
+                "lokasi_supplier",
+                "lokasi_supplyer",
+            ),
+            "satuan_barang": pick(r, "satuan_barang", "satuan") or "pcs",
+            "kondisi": (pick(r, "conditions", "kondisi", "status_of_products") or "PUBLISHED").upper(),
+            "updated_at": now_iso(),
+        }
         res = await db.products.update_one({"sku": sku}, {"$set": doc}, upsert=False)
         if res.matched_count:
             updated += 1

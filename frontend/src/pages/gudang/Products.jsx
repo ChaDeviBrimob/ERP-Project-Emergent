@@ -5,7 +5,7 @@ import { Package, Plus, Download, Pencil, Trash2, Search, ImageOff } from "lucid
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageBanner, StatusBadge, ImportButton, Card, KpiCard } from "@/components/common/ui";
-import ProductDialog, { KONDISI } from "@/pages/gudang/ProductDialog";
+import ProductDialog, { SHEET_KONDISI } from "@/pages/gudang/ProductDialog";
 import { api, errMsg, downloadFile } from "@/lib/api";
 import { rupiah } from "@/lib/fmt";
 import { useAuth } from "@/context/AuthContext";
@@ -66,7 +66,12 @@ export default function Products() {
             </Select>
             <Select value={kondisi} onValueChange={setKondisi}>
               <SelectTrigger className="w-44 h-9" data-testid="product-kondisi-filter"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="all">Kondisi: Semua</SelectItem>{KONDISI.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              <SelectContent>
+                <SelectItem value="all">Kondisi: Semua</SelectItem>
+                {SHEET_KONDISI.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             <div className="flex gap-2 lg:ml-auto">
               <ImportButton endpoint="/products/import" onDone={load} testId="product-import-button" />
@@ -78,14 +83,44 @@ export default function Products() {
             <table className="w-full text-xs" data-testid="product-table">
               <thead>
                 <tr className="bg-muted/60 text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {["Foto", "Barcode / SKU", "Nama Barang", "Variant", "Min", "Awal", "In", "Return", "Out", "Stok Riil", "Status Stok", "HPP", "Harga Jual", "Margin", "Kondisi", ""].map((h, i) => <th key={i} className="px-3 py-3 text-left font-bold whitespace-nowrap">{h}</th>)}
+                  {[
+                    "Foto",
+                    "Barcode / SKU",
+                    "Nama Barang",
+                    "Variant",
+                    "Min",
+                    "Awal",
+                    "In",
+                    "Return",
+                    "Out",
+                    "Stok Riil",
+                    "Status Stok",
+                    "To Do",
+                    "Supplier",
+                    "HPP",
+                    "Harga Jual",
+                    "Margin",
+                    "Kondisi",
+                    "",
+                  ].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-3 py-3 text-left font-bold whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((p) => (
                   <tr key={p.id} className="border-b hover:bg-muted/40" data-testid={`product-row-${p.sku}`}>
                     <td className="px-3 py-2">{p.image ? <img src={p.image} alt="" className="h-9 w-9 rounded-md object-cover" /> : <div className="h-9 w-9 rounded-md bg-muted grid place-items-center"><ImageOff className="h-4 w-4 text-muted-foreground" /></div>}</td>
-                    <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">{p.sku}</td>
+                    <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">
+                      {p.barcode || p.sku}
+                      <br />
+                      <span className="text-muted-foreground">{p.sku}</span>
+                    </td>
                     <td className="px-3 py-2 font-medium min-w-[160px]">{p.nama}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{p.variant}</td>
                     <td className="px-3 py-2 tabular-nums">{p.min_stock}</td>
@@ -93,8 +128,29 @@ export default function Products() {
                     <td className="px-3 py-2 tabular-nums text-emerald-600">+{p.stock_in}</td>
                     <td className="px-3 py-2 tabular-nums text-sky-600">+{p.return_in}</td>
                     <td className="px-3 py-2 tabular-nums text-red-600">-{Math.abs(p.stock_out)}</td>
-                    <td className="px-3 py-2 tabular-nums font-extrabold" data-testid={`stok-riil-${p.sku}`}>{p.stok_riil}</td>
-                    <td className="px-3 py-2"><StatusBadge value={p.status_stok} testId={`status-stok-${p.sku}`} /></td>
+                    <td
+                      className="px-3 py-2 tabular-nums font-extrabold"
+                      data-testid={`stok-riil-${p.sku}`}
+                    >
+                      {p.stok_riil}
+                    </td>
+                    <td className="px-3 py-2">
+                      <StatusBadge value={p.status_stok} testId={`status-stok-${p.sku}`} />
+                    </td>
+                    <td
+                      className="px-3 py-2 max-w-36 truncate"
+                      title={p.action_summary}
+                      data-testid={`product-action-${p.sku}`}
+                    >
+                      {p.action_summary || "-"}
+                    </td>
+                    <td
+                      className="px-3 py-2 max-w-36 truncate"
+                      title={p.supplier_utama}
+                      data-testid={`product-supplier-${p.sku}`}
+                    >
+                      {p.supplier_utama || "-"}
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap">{rupiah(p.hpp)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{rupiah(p.harga_jual)}</td>
                     <td className="px-3 py-2">{p.margin}%</td>
@@ -105,12 +161,26 @@ export default function Products() {
                     </td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan={16} className="py-10 text-center text-muted-foreground">Belum ada produk</td></tr>}
+                {rows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={18}
+                      className="py-10 text-center text-muted-foreground"
+                      data-testid="product-empty-state"
+                    >
+                      Belum ada produk
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </Card>
-        <p className="text-[11px] text-muted-foreground">Format import: kolom SKU/BARCODE, NAMA, VARIANT, KATEGORI, MIN STOCK, STOK AWAL, STOCK IN, RETURN, STOCK OUT, HPP, HARGA JUAL, KONDISI. SKU yang sudah ada akan diperbarui.</p>
+        <p className="text-[11px] text-muted-foreground" data-testid="product-import-format-note">
+          Import cocok dengan master Google Sheet: header BARCODE/KODE BARANG, NAMA, MINIMUM
+          KEEP STOCK, STOCK KELUAR, REAL STOCK INVENTORY, HPP/COGS, harga, supplier, serta
+          catatan. Judul laporan dan baris satuan otomatis dilewati.
+        </p>
       </div>
       <ProductDialog open={dlg.open} product={dlg.product} onOpenChange={(o) => setDlg((d) => ({ ...d, open: o }))} onSaved={load} />
     </div>

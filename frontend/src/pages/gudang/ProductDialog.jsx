@@ -10,9 +10,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api, errMsg } from "@/lib/api";
 import { rupiah } from "@/lib/fmt";
 
-export const KONDISI = ["PUBLISHED", "SLOW MOVING", "DEAD STOCK", "URGENT"];
-const EMPTY = { sku: "", nama: "", variant: "", kategori: "", min_stock: 0, stok_awal: 0, stock_in: 0, return_in: 0, stock_out: 0, hpp: 0, harga_jual: 0, kondisi: "PUBLISHED", barang_susah: false };
-const NUMS = [["min_stock", "Min Stock (Keep)"], ["stok_awal", "Stok Awal"], ["stock_in", "Stock In (Masuk)"], ["return_in", "Return In (Retur)"], ["stock_out", "Stock Out (Keluar)"], ["hpp", "HPP"], ["harga_jual", "Harga Jual"]];
+export const SHEET_KONDISI = [
+  "PUBLISHED",
+  "HOLD DULU SEMENTARA",
+  "DISCONTINUE",
+  "UPLOAD PRODUCT",
+  "DROPSHIP",
+  "SLOW MOVING",
+  "DEAD STOCK",
+  "URGENT",
+];
+const EMPTY = {
+  sku: "",
+  barcode: "",
+  nama: "",
+  variant: "",
+  kategori: "",
+  action_summary: "",
+  catatan_tindakan: "",
+  catatan_staff: "",
+  min_stock: 0,
+  stok_awal: 0,
+  stock_in: 0,
+  return_in: 0,
+  stock_out: 0,
+  hpp: 0,
+  harga_normal: 0,
+  harga_jual: 0,
+  diskon_promo: 0,
+  supplier_utama: "",
+  lokasi_supplier: "",
+  satuan_barang: "pcs",
+  kondisi: "PUBLISHED",
+  barang_susah: false,
+};
+const NUMS = [
+  ["min_stock", "Min Stock (Keep)"],
+  ["stok_awal", "Stok Awal"],
+  ["stock_in", "Stock In (Masuk)"],
+  ["return_in", "Return In (Retur)"],
+  ["stock_out", "Stock Out (Keluar)"],
+  ["hpp", "HPP / COGS"],
+  ["harga_normal", "Harga Normal"],
+  ["harga_jual", "Harga Setelah Promo"],
+  ["diskon_promo", "Diskon Promo (%)"],
+];
 
 export default function ProductDialog({ open, onOpenChange, product, onSaved }) {
   const [f, setF] = useState(EMPTY);
@@ -56,8 +98,25 @@ export default function ProductDialog({ open, onOpenChange, product, onSaved }) 
             <input type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} data-testid="product-image-input" />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            {[["sku", "Barcode / Kode Barang"], ["nama", "Nama Barang"], ["variant", "Variant / Spesifikasi"], ["kategori", "Kategori"]].map(([k, l]) => (
-              <div key={k} className="space-y-1"><Label className="text-xs">{l}</Label><Input value={f[k]} onChange={(e) => set(k, e.target.value)} data-testid={`product-${k}-input`} /></div>
+            {[
+              ["barcode", "Barcode Barang"],
+              ["sku", "SKU / Kode Internal"],
+              ["nama", "Nama Barang"],
+              ["variant", "Variant / Kapasitas"],
+              ["kategori", "Kategori"],
+              ["satuan_barang", "Satuan Barang"],
+              ["action_summary", "Action Summary / To Do"],
+              ["supplier_utama", "Supplier Utama"],
+              ["lokasi_supplier", "Lokasi Supplier"],
+            ].map(([k, l]) => (
+              <div key={k} className="space-y-1">
+                <Label className="text-xs">{l}</Label>
+                <Input
+                  value={f[k]}
+                  onChange={(e) => set(k, e.target.value)}
+                  data-testid={`product-${k}-input`}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -68,8 +127,18 @@ export default function ProductDialog({ open, onOpenChange, product, onSaved }) 
           <div className="space-y-1"><Label className="text-xs">Kondisi Barang</Label>
             <Select value={f.kondisi} onValueChange={(v) => set("kondisi", v)}>
               <SelectTrigger data-testid="product-kondisi-select"><SelectValue /></SelectTrigger>
-              <SelectContent>{KONDISI.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent>
+              <SelectContent>{SHEET_KONDISI.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}</SelectContent>
             </Select>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Catatan Tindakan / Revisi</Label>
+            <Input value={f.catatan_tindakan} onChange={(e) => set("catatan_tindakan", e.target.value)} data-testid="product-action-note-input" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Catatan Staff & Kondisi</Label>
+            <Input value={f.catatan_staff} onChange={(e) => set("catatan_staff", e.target.value)} data-testid="product-staff-note-input" />
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-sm">
@@ -78,7 +147,7 @@ export default function ProductDialog({ open, onOpenChange, product, onSaved }) 
           <label className="flex items-center gap-2 text-xs"><Switch checked={f.barang_susah} onCheckedChange={(v) => set("barang_susah", v)} data-testid="product-susah-switch" /> Tandai STOCK BARANG SUSAH</label>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="product-cancel-button">Batal</Button>
           <Button onClick={save} disabled={busy || !f.sku || !f.nama} data-testid="product-save-button">Simpan</Button>
         </DialogFooter>
       </DialogContent>
