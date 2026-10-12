@@ -1,0 +1,171 @@
+{
+  "project_name": "PT. VRCHINDO Digital Solutions - Smart Warehouse & Multi-Marketplace ERP",
+  "archetype": "High-Density Command ERP (Swiss Precision + Kinetic Modern)",
+  "language": "id-ID",
+  "framework_notes": {
+    "file_extension": ".js / .jsx",
+    "theme_support": "Light & Dark Mode Switcher (Persisted via LocalStorage/State)",
+    "pwa_support": "Mobile Responsive with Bottom Nav & Service Worker Install Prompt"
+  },
+  "color_palette": {
+    "header_gradient": "bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 text-white",
+    "banner_gradient": "bg-gradient-to-r from-indigo-800 via-purple-800 to-blue-700 text-white",
+    "light_mode": {
+      "bg_app": "#f8fafc",
+      "bg_card": "#ffffff",
+      "bg_sidebar": "#ffffff",
+      "text_primary": "#0f172a",
+      "text_muted": "#64748b",
+      "border": "#e2e8f0"
+    },
+    "dark_mode": {
+      "bg_app": "#0b0f17",
+      "bg_card": "#131b2e",
+      "bg_sidebar": "#0f172a",
+      "text_primary": "#f8fafc",
+      "text_muted": "#94a3b8",
+      "border": "#1e293b"
+    },
+    "kpi_badges": {
+      "purple_process": {
+        "border": "#8b5cf6",
+        "bg": "rgba(139, 92, 246, 0.1)",
+        "icon": "#7c3aed"
+      },
+      "orange_risky": {
+        "border": "#f97316",
+        "bg": "rgba(249, 115, 22, 0.1)",
+        "icon": "#ea580c"
+      },
+      "red_cancel": {
+        "border": "#ef4444",
+        "bg": "rgba(239, 68, 68, 0.1)",
+        "icon": "#dc2626"
+      },
+      "green_delivered": {
+        "border": "#10b981",
+        "bg": "rgba(16, 185, 129, 0.1)",
+        "icon": "#059669"
+      },
+      "red_ship_needed": {
+        "border": "#ec4899",
+        "bg": "rgba(236, 72, 153, 0.1)",
+        "icon": "#db2777"
+      }
+    },
+    "forbidden_colors_check": {
+      "ai_page": "#7351B7 forbidden for pure background - gradient permitted",
+      "dashboard_teal": "#1B93A4 avoided"
+    }
+  },
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "hierarchy": {
+      "h1_hero": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h2_section": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h3_card": "text-base font-semibold",
+      "table_header": "text-xs font-bold uppercase tracking-wider text-muted-foreground",
+      "body_regular": "text-sm font-normal leading-relaxed",
+      "badge_text": "text-xs font-semibold"
+    }
+  },
+  "layout_and_structure": {
+    "top_header": {
+      "description": "Fixed header with gradient background, containing PT. VRCHINDO logo with live green status dot, mobile menu toggle, quick product search, calculator tool button, calendar/date tool, POS button, Pengiriman Paket quick action, live clock 'HH:mm:ss WIB', live date 'Hari, DD MMMM YYYY', dark mode switcher, notifications bell with count, user avatar dropdown.",
+      "sticky_class": "sticky top-0 z-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-blue-900 text-white shadow-md px-4 py-2.5 flex items-center justify-between"
+    },
+    "sidebar": {
+      "description": "Collapsible sidebar with white background in light mode and dark slate in dark mode. Grouped with uppercase category labels: DASHBOARD, DATA INTERNAL GUDANG, PENGIRIMAN PAKET, MARKETPLACE HUB (BIG SELLER), POS & SALES, MANAGEMENT & LAPORAN, SETTINGS.",
+      "items_style": "flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+    },
+    "sub_tab_bar": {
+      "items": [
+        "Dashboard Overview",
+        "Scan Process Pesanan",
+        "Scan Pengiriman Paket",
+        "Beresiko Terlambat",
+        "Returan RTS",
+        "Cancel Order",
+        "Data Internal Gudang",
+        "BigSeller Marketplace Hub",
+        "Chat Multi-Akun",
+        "Laporan & Analytics"
+      ]
+    },
+    "scanner_section": {
+      "description": "Barcode & Camera Scanner module with high focus outline, manual barcode text input, camera toggle switch, quick audio beep effect toggle, and prominent green 'PROCESS / SCAN' action button."
+    },
+    "data_table": {
+      "columns": [
+        "NO",
+        "RESI PESANAN",
+        "EXPEDISI",
+        "MARKETPLACE",
+        "AKUN",
+        "KETERANGAN",
+        "STATUS PESANAN",
+        "WARNING",
+        "DROP OFF",
+        "HARI",
+        "TANGGAL",
+        "WAKTU",
+        "ACTIONS"
+      ],
+      "density": "Compact high-density table padding py-2.5 px-3 with zebra striping in dark/light mode"
+    },
+    "pwa_mobile_bottom_nav": {
+      "description": "Fixed bottom bar on small viewports with quick items: Dashboard, Scanner, Gudang, Marketplace Chat, and Profile."
+    }
+  },
+  "data_separation_architecture": {
+    "internal_gudang_only": [
+      "Stok Master & SKU Barcode",
+      "Stok Awal, In (Masuk), Return, Out (Keluar)",
+      "Stok Riil (Formula: Awal + In + Return - Out)",
+      "Batas Minimum Stok Alert & Reorder Point",
+      "HPP (Harga Pokok Penjualan) & Harga Jual Internal",
+      "Kondisi Barang (Bagus, Rusak/Afkir, Retur)",
+      "Form Penyesuaian Stok (Stock Adjustment with Reason & Audit Log)"
+    ],
+    "bigseller_marketplace_module": [
+      "Integrasi Multi-Akun Marketplace (Shopee, Tokopedia, TikTok Shop, Lazada)",
+      "Sinkronisasi Pesanan Real-time",
+      "Unified Chat Inbox (Pesan Masuk dari Semua Akun & Marketplace)",
+      "Pengaturan Massal (Bulk Edit Promo, Harga Coret, Diskon, Deskripsi Produk, Foto Showcase)"
+    ]
+  },
+  "interactive_modals": {
+    "calculator_modal": "Pop-up interactive calculator tool with basic arithmetic (+, -, *, /) and percentage calculator for rapid price/discount check.",
+    "date_calendar_modal": "Popup calendar picker with quick filter shortcuts (Hari Ini, 7 Hari Terakhir, Bulan Ini, Custom Range).",
+    "pos_shortcut_modal": "Quick cashier screen for direct counter sales.",
+    "stock_adjustment_modal": "Popup form for updating warehouse stock with audit trail."
+  },
+  "media_assets": {
+    "product_images": [
+      "https://images.unsplash.com/photo-1491933382434-500287f9b54b",
+      "https://images.unsplash.com/photo-1647489238347-dbd651c2f37a",
+      "https://images.unsplash.com/photo-1698376621004-70ce754157d1",
+      "https://images.unsplash.com/photo-1609334761848-77b4d1994040"
+    ],
+    "logistics_images": [
+      "https://images.unsplash.com/photo-1624137527136-66e631bdaa0e",
+      "https://images.unsplash.com/photo-1543499459-d1460946bdc6",
+      "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55",
+      "https://images.unsplash.com/photo-1620455800201-7f00aeef12ed"
+    ]
+  },
+  "accessibility_and_testing": {
+    "contrast": "APCA & WCAG AA compliant. Contrast ratio > 4.5:1 for table data and status pills",
+    "data_testid_rules": "All interactive elements, buttons, tabs, inputs, modals, and KPI values MUST have data-testid attributes in kebab-case (e.g. data-testid='header-calculator-button', data-testid='kpi-pesanan-diproses-value', data-testid='scan-barcode-input', data-testid='table-order-row-1')."
+  },
+  "instructions_to_main_agent": [
+    "Build a production-grade React ERP application using the provided design hierarchy.",
+    "Recreate exact screenshot structure: Top gradient bar + left sidebar + sub-tab navigation + top banner + KPI cards with colored top border + barcode scan panel + rich data table.",
+    "Ensure complete separation between 'Data Internal Gudang' and 'BigSeller Marketplace Hub'.",
+    "Include working Calculator modal, live clock with seconds (WIB timezone format), live date display in Indonesian, and Multi-Marketplace Chat Inbox tab.",
+    "Support Dark Mode toggle with seamless persistence and full visual contrast.",
+    "Ensure all interactive components have proper data-testid attributes for automated testing."
+  ]
+}
