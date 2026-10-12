@@ -38,7 +38,10 @@ def create_token(user_id: str, kind: str, delta: timedelta) -> str:
 
 
 def public_user(u: dict) -> dict:
-    return {k: u.get(k) for k in ("user_id", "email", "name", "role", "picture", "active", "created_at")}
+    out = {k: u.get(k) for k in ("user_id", "email", "name", "role", "picture", "active", "created_at",
+                                  "last_login", "password_updated_at")}
+    out["has_password"] = bool(u.get("password_hash"))
+    return out
 
 
 async def _user_from_session(token: str):

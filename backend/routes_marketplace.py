@@ -8,6 +8,16 @@ router = APIRouter(prefix="/api/mp")
 MARKETPLACES = ["SHOPEE", "TOKOPEDIA", "TIKTOK SHOP", "LAZADA"]
 ORDER_STATUS = ["Belum Bayar", "Perlu Dikirim", "Dikirim", "Selesai", "Dibatalkan"]
 RESI_PREFIX = {"SHOPEE": "SPXID", "TOKOPEDIA": "TL", "TIKTOK SHOP": "JP", "LAZADA": "LXAD"}
+KURIR = {"SHOPEE": "SPX Standard", "TOKOPEDIA": "JNE REG", "TIKTOK SHOP": "J&T Express", "LAZADA": "LEX ID"}
+PRINT_DEFAULT = {"paper": "100x150", "show_items": True, "show_qr": True, "show_sender": True, "show_price": False,
+                 "sender_nama": "", "sender_telp": "", "sender_alamat": "", "catatan": "", "copies": 1}
+CITIES = [("Jl. Melati No. 12", "Jakarta Selatan"), ("Jl. Kenanga No. 5", "Bandung"), ("Jl. Mawar No. 21", "Surabaya"),
+          ("Jl. Anggrek No. 8", "Medan"), ("Jl. Dahlia No. 3", "Semarang")]
+
+
+def demo_penerima(buyer):
+    jalan, kota = random.choice(CITIES)
+    return {"nama": buyer, "telp": f"08{random.randint(10**9, 10**10 - 1)}", "alamat": jalan, "kota": kota}
 BUYERS = ["Rina S.", "Budi P.", "Ahmad F.", "Sari W.", "Dewi K.", "Joko T.", "Maya L.", "Rudi H."]
 QUESTIONS = ["Kak, barangnya ready?", "Kapan dikirim ya kak?", "Bisa kirim hari ini?", "Ada varian warna lain?",
              "Resinya belum update kak", "Bisa minta bubble wrap tambahan?"]
@@ -58,6 +68,28 @@ class OrderStatusIn(BaseModel):
     status: str
 
 
+class PrintIn(BaseModel):
+    ids: List[str]
+    auto_ship: bool = True
+
+
+class PrintSettingIn(BaseModel):
+    paper: str = "100x150"
+    show_items: bool = True
+    show_qr: bool = True
+    show_sender: bool = True
+    show_price: bool = False
+    sender_nama: str = ""
+    sender_telp: str = ""
+    sender_alamat: str = ""
+    catatan: str = ""
+    copies: int = 1
+
+
+def new_resi(marketplace):
+    return f"{RESI_PREFIX.get(marketplace, 'JP')}{random.randint(10**9, 10**10 - 1)}"
+
+
 async def store_map():
     return {s["id"]: s for s in await db.mp_stores.find({}, NO_ID).to_list(200)}
 
@@ -69,7 +101,9 @@ async def make_order(store, products):
     order = {"id": new_id("ord"), "order_no": f"{store['marketplace'][:2]}{random.randint(10**9, 10**10 - 1)}",
              "store_id": store["id"], "marketplace": store["marketplace"], "buyer": random.choice(BUYERS),
              "items": lines, "total": round(sum(l["qty"] * l["harga"] for l in lines)), "status": "Perlu Dikirim",
-             "resi": "", "kurir": "", "is_demo": True, "created_at": now_iso()}
+             "resi": "", "kurir": KURIR.get(store["marketplace"], ""), "is_demo": True, "created_at": now_iso(),
+             "berat_gram": random.choice([250, 500, 1000]), "print_count": 0}
+    order["penerima"] = demo_penerima(order["buyer"])
     await db.mp_orders.insert_one(order)
 
 
@@ -145,9 +179,57 @@ async def ship_order(oid: str, _=Depends(get_current_user)):
     o = await db.mp_orders.find_one({"id": oid}, NO_ID)
     if not o or o["status"] != "Perlu Dikirim":
         raise HTTPException(400, "Pesanan tidak bisa diatur pengirimannya")
-    resi = f"{RESI_PREFIX.get(o['marketplace'], 'JP')}{random.randint(10**9, 10**10 - 1)}"
-    await db.mp_orders.update_one({"id": oid}, {"$set": {"status": "Dikirim", "resi": resi, "kurir": "Auto"}})
+    resi = new_resi(o["marketplace"])
+    await db.mp_orders.update_one({"id": oid}, {"$set": {"status": "Dikirim", "resi": resi,
+                                                         "kurir": o.get("kurir") or KURIR.get(o["marketplace"], "")}})
     return {"resi": resi}
+
+
+@router.post("/orders/print")
+async def print_orders(body: PrintIn, _=Depends(get_current_user)):
+    if not body.ids:
+        raise HTTPException(400, "Pilih pesanan yang akan dicetak")
+    smap = await store_map()
+    out, skipped = [], []
+    for oid in body.ids:
+        o = await db.mp_orders.find_one({"id": oid}, NO_ID)
+        if not o:
+            continue
+        if not o.get("resi"):
+            if not (body.auto_ship and o["status"] == "Perlu Dikirim"):
+                skipped.append(o["order_no"])
+                continue
+            o["resi"] = new_resi(o["marketplace"])
+            o["status"] = "Dikirim"
+        o["kurir"] = o.get("kurir") or KURIR.get(o["marketplace"], "")
+        o["penerima"] = o.get("penerima") or demo_penerima(o["buyer"])
+        o["print_count"] = o.get("print_count", 0) + 1
+        await db.mp_orders.update_one({"id": oid}, {"$set": {"resi": o["resi"], "status": o["status"], "kurir": o["kurir"],
+                                                             "penerima": o["penerima"], "print_count": o["print_count"],
+                                                             "printed_at": now_iso()}})
+        s = smap.get(o["store_id"], {})
+        out.append({**strip(o), "nama_toko": s.get("nama_toko", "-")})
+    return {"orders": out, "skipped": skipped, "settings": await get_print_settings()}
+
+
+async def get_print_settings():
+    saved = {d["marketplace"]: d for d in await db.mp_print_settings.find({}, NO_ID).to_list(20)}
+    return {m: {**PRINT_DEFAULT, **{k: v for k, v in saved.get(m, {}).items() if k != "marketplace"}} for m in MARKETPLACES}
+
+
+@router.get("/print-settings")
+async def read_print_settings(_=Depends(get_current_user)):
+    return await get_print_settings()
+
+
+@router.put("/print-settings/{marketplace}")
+async def save_print_settings(marketplace: str, body: PrintSettingIn, _=Depends(get_current_user)):
+    if marketplace not in MARKETPLACES:
+        raise HTTPException(400, "Marketplace tidak didukung")
+    if body.paper not in ("100x150", "100x100", "A6", "A4") or not 1 <= body.copies <= 3:
+        raise HTTPException(400, "Ukuran kertas / jumlah salinan tidak valid")
+    await db.mp_print_settings.update_one({"marketplace": marketplace}, {"$set": {**body.model_dump(), "marketplace": marketplace}}, upsert=True)
+    return (await get_print_settings())[marketplace]
 
 
 @router.patch("/orders/{oid}/status")

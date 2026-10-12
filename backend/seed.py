@@ -70,6 +70,15 @@ async def seed_demo():
                                        "selesai": (now() + timedelta(days=7)).date().isoformat(), "aktif": True,
                                        "created_at": now_iso()})
     if await db.packages.count_documents({}) == 0:
+        await _seed_packages()
+    from routes_marketplace import demo_penerima, KURIR
+    async for o in db.mp_orders.find({"penerima": {"$exists": False}}, {"_id": 0, "id": 1, "buyer": 1, "marketplace": 1}):
+        await db.mp_orders.update_one({"id": o["id"]}, {"$set": {"penerima": demo_penerima(o["buyer"]), "berat_gram": 500,
+                                                               "kurir": KURIR.get(o["marketplace"], ""), "print_count": 0}})
+
+
+async def _seed_packages():
+    if True:
         from logic import detect
         for idx, resi in enumerate(DEMO_RESI):
             eks, mp = detect(resi)

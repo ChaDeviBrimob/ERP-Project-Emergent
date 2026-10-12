@@ -30,6 +30,7 @@ class UserIn(BaseModel):
 
 
 class UserPatch(BaseModel):
+    email: Optional[EmailStr] = None
     name: Optional[str] = None
     role: Optional[str] = None
     active: Optional[bool] = None
@@ -62,6 +63,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     if not user.get("active", True):
         raise HTTPException(403, "Akun dinonaktifkan. Hubungi Admin.")
     await db.login_attempts.delete_one({"identifier": ident})
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"last_login": now_iso()}})
     token = set_jwt_cookies(response, user["user_id"])
     return {"user": public_user(user), "token": token}
 
@@ -140,7 +142,14 @@ async def create_user(body: UserIn, _=Depends(require_admin)):
 async def update_user(user_id: str, body: UserPatch, admin=Depends(require_admin)):
     upd = {k: v for k, v in body.model_dump().items() if v is not None and k != "password"}
     if body.password:
+        if len(body.password) < 6:
+            raise HTTPException(400, "Password minimal 6 karakter")
         upd["password_hash"] = hash_password(body.password)
+        upd["password_updated_at"] = now_iso()
+    if "email" in upd:
+        upd["email"] = upd["email"].lower()
+        if await db.users.find_one({"email": upd["email"], "user_id": {"$ne": user_id}}):
+            raise HTTPException(400, "Email sudah dipakai user lain")
     if user_id == admin["user_id"] and (upd.get("active") is False or upd.get("role") == "staff"):
         raise HTTPException(400, "Tidak bisa menonaktifkan/menurunkan akun sendiri")
     await db.users.update_one({"user_id": user_id}, {"$set": upd})

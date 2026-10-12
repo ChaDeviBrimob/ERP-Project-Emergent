@@ -17,6 +17,7 @@ import MpProducts from "@/pages/mp/MpProducts";
 import Promos from "@/pages/mp/Promos";
 import Pos from "@/pages/Pos";
 import Users from "@/pages/Users";
+import PrintResi from "@/pages/mp/PrintResi";
 
 function AppRouter() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/cetak-resi" element={<ProtectedRoute><PrintResi /></ProtectedRoute>} />
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/gudang/produk" element={<Products />} />
