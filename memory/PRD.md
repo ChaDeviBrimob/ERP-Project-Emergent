@@ -30,9 +30,22 @@ Admin/owner, staff gudang/packing, staff pengiriman, CS marketplace (chat), kasi
 - Marketplace DEMO (MOCKED): toko multi-akun, pesanan, chat inbox, produk & harga (bulk diskon), promo
 - POS kasir, dashboard, header calculator/clock/date/dark mode/notifications, PWA installable
 - Testing iteration_1: backend 28/28, frontend critical flows pass
+- Google Sheet Gudang berhasil dianalisis melalui halaman edit publik: 27 tab terpetakan,
+  termasuk master inventory, stok masuk, stok keluar, restock, dan RTS/retur.
+- Import CSV/Excel Gudang sekarang kompatibel dengan struktur master sheet yang diawali judul
+  laporan: mendeteksi header BARCODE/KODE BARANG dan NAMA, melewati baris satuan, lalu memetakan
+  barcode, stok minimum, stok aktual, HPP, harga normal/promo, action summary, supplier, dan
+  kondisi produk.
+- Untuk impor snapshot master dengan REAL STOCK INVENTORY, stok aplikasi disamakan dengan nilai
+  aktual sheet tanpa mengurangkan STOCK KELUAR kedua kali. Form dan tabel Gudang juga mendukung
+  Barcode, To Do, supplier, lokasi supplier, harga promo, serta catatan operasional.
+- Testing iteration_2: backend dan frontend 100% lulus untuk impor format master, form Gudang,
+  dan responsivitas mobile.
 
 ## Backlog
 - P0: Real marketplace Partner API connectors (needs App Key/Secret per marketplace)
+- P1: Verifikasi alur edit password Pengguna serta cetak resi marketplace end-to-end
+- P1: Sinkronisasi Google Sheet berkala dua arah (memerlukan akses ekspor stabil atau service
+  account; impor Excel/CSV lokal sudah tersedia dan teruji)
 - P1: Expo/React Native native app (not built yet; PWA available)
-- P1: Google Sheet sync (needs sheet shared publicly or service account)
 - P2: Purchase orders, akuntansi, CRM modules from implementation_plan

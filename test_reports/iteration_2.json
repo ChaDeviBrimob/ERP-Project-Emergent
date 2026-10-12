@@ -1,0 +1,20 @@
+{
+  "summary": "Focused regression for Gudang master-sheet CSV import + Products UI + mobile responsive. Backend: new pytest /app/backend/tests/test_gudang_import.py posts a CSV mimicking PT VRCHINDO master format (title rows, master header starting NO/BARCODE/NAMA BARANG INVENTORY STOCK GUDANG, PCS unit row to be skipped, 1 data row). Asserts imported product has barcode=sku, nama, min_stock=12, hpp=15000, harga_normal=30000, harga_jual=27000, supplier_utama, lokasi_supplier, action_summary, kondisi=PUBLISHED, and the critical rule: stok_riil=41 (= REAL STOCK INVENTORY, NOT real-stock_out), stock_out=stock_in=return_in=0. PASSED. Frontend: logged in with admin creds, opened /gudang/produk; verified data-testids products-page, product-add-button, product-import-button, product-export-button, product-search-input, product-status-filter, product-kondisi-filter, product-table, product-import-format-note. Opened Tambah dialog and verified all required fields present with proper testids (barcode, sku, nama, action_summary, supplier_utama, lokasi_supplier, harga_normal, harga_jual, action-note, staff-note, kondisi select, stok-riil preview, save). Mobile 390px: no horizontal overflow on page shell (scrollWidth=clientWidth=390); table scrolls inside its own container as expected.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_gudang_import.py", "/app/backend/tests/backend_test.py"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes_gudang.import_products: when REAL STOCK INVENTORY is used, implementation stuffs it into stok_awal and forces stock_out=0; this correctly gives stok_riil=REAL STOCK but silently discards the sheet's STOCK KELUAR value which may be useful audit info. Consider storing STOCK KELUAR separately (e.g., stock_out_history) if business wants to retain it.",
+    "pick() fuzzy regex matches '(?:^|_)key(?:_|$)' is helpful but can be too loose for short keys like 'kondisi' matching unrelated columns; keep an eye on it as sheet grows.",
+    "to_int strips '.' which would break decimal prices if import is reused for currency with decimals; currently harmless (IDR integers)."
+  ],
+  "updated_files": ["/app/backend/tests/test_gudang_import.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin chadevibrimob@gmail.com / Vrchindo@2026 (working).",
+  "seed_data_creation": "Temporary TEST_IMP_* product created via CSV import, deleted after assertion.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Master-sheet CSV import rule verified: when REAL STOCK INVENTORY is present and stok_awal/stock_in/return_in all empty, backend sets stok_awal=real_stock and stock_out=0, giving stok_riil = REAL STOCK (not minus STOCK KELUAR). Test file: /app/backend/tests/test_gudang_import.py. Run with REACT_APP_BACKEND_URL env var set to preview URL.",
+  "rca of the issue": "N/A — all requested behaviors pass."
+}
