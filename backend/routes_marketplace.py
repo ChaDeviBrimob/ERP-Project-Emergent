@@ -226,7 +226,7 @@ async def read_print_settings(_=Depends(get_current_user)):
 async def save_print_settings(marketplace: str, body: PrintSettingIn, _=Depends(get_current_user)):
     if marketplace not in MARKETPLACES:
         raise HTTPException(400, "Marketplace tidak didukung")
-    if body.paper not in ("100x150", "100x100", "A6", "A4") or not 1 <= body.copies <= 3:
+    if body.paper not in ("100x150", "100x100", "100x75", "76x130", "80mm", "58mm", "A6", "A5", "A4") or not 1 <= body.copies <= 5:
         raise HTTPException(400, "Ukuran kertas / jumlah salinan tidak valid")
     await db.mp_print_settings.update_one({"marketplace": marketplace}, {"$set": {**body.model_dump(), "marketplace": marketplace}}, upsert=True)
     return (await get_print_settings())[marketplace]

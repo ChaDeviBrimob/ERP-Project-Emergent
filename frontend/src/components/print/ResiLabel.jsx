@@ -77,9 +77,10 @@ export default function ResiLabel({ order, settings }) {
   const s = settings || {};
   const p = PAPER[s.paper] || PAPER["100x150"];
   const pen = order.penerima || {};
-  const small = s.paper === "100x100";
+  const small = ["100x100", "100x75", "80mm", "58mm"].includes(s.paper);
+  const large = ["A4", "A5"].includes(s.paper);
   return (
-    <div className="resi-label bg-white text-black border border-black flex flex-col overflow-hidden mx-auto" style={{ width: p.w, height: s.paper === "A4" ? "150mm" : p.h, fontFamily: "Arial, sans-serif" }} data-testid={`resi-label-${order.order_no}`}>
+    <div className="resi-label bg-white text-black border border-black flex flex-col overflow-hidden mx-auto" style={{ width: p.w, height: large ? "148mm" : p.h, fontFamily: "Arial, sans-serif" }} data-testid={`resi-label-${order.order_no}`}>
       <Header b={b} order={order} variant={b.layout} />
       <div className="px-2 pt-2 flex flex-col items-center border-b border-black/70 pb-1.5">
         <Barcode value={order.resi} height={small ? 40 : 56} />

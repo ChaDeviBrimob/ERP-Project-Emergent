@@ -86,3 +86,10 @@ android-sdk/
 frontend/node_modules/.cache/default-development/7.pack
 frontend/node_modules/.cache/default-development/11.pack
 frontend/node_modules/.cache/default-development/2.pack
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials
+frontend/node_modules/.cache/default-development/1.pack

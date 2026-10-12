@@ -53,7 +53,7 @@ export default function PrintSettingsDialog({ open, onOpenChange }) {
               <div className="space-y-1"><Label className="text-xs">Jumlah Salinan</Label>
                 <Select value={String(s.copies)} onValueChange={(v) => set("copies", Number(v))}>
                   <SelectTrigger data-testid="print-copies-select"><SelectValue /></SelectTrigger>
-                  <SelectContent>{["1", "2", "3"].map((c) => <SelectItem key={c} value={c}>{c}x</SelectItem>)}</SelectContent>
+                  <SelectContent>{["1", "2", "3", "4", "5"].map((c) => <SelectItem key={c} value={c}>{c}x</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
